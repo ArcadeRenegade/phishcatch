@@ -16,7 +16,7 @@ import { getConfig } from './config';
 import { isBannedUrl, setBannedMessage } from './content-lib/bannedMessage';
 import { initDataCollection } from './content-lib/dataCollection';
 import { debounce } from './content-lib/debounce';
-import { runInferenceScan } from './content-lib/inference';
+import { startFieldDetection } from './content-lib/fieldDetection';
 import { getDomainType } from './lib/getDomainType';
 import { getSanitizedUrl } from './lib/getSanitizedUrl';
 import { DomainType, PasswordContent, UsernameContent } from './types';
@@ -155,8 +155,9 @@ ready(() => {
     // the dataCollectionEnabled storage flag inside initDataCollection().
     initDataCollection();
 
-    // Real-time AI-prompt detection via the local ONNX model.
-    runInferenceScan();
+    // Scrape interactive fields and delegate AI-prompt classification to the
+    // background service worker (which owns the ONNX model). No ML runs here.
+    startFieldDetection();
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     setTimeout(async () => {

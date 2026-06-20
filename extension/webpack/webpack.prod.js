@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const { merge } = require('webpack-merge')
-const common = require('./webpack.common.js')
+const { merge } = require('webpack-merge');
+const common = require('./webpack.common.js');
 
 module.exports = merge(common, {
-  mode: 'production',
-})
+    mode: 'production',
+});

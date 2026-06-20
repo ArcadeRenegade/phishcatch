@@ -20,8 +20,15 @@ const srcDir = '../src/';
 module.exports = {
     entry: {
         popup: path.join(__dirname, srcDir + 'popup.tsx'),
+        // Classic (non-module) service worker. onnxruntime-web is NOT loaded here:
+        // MV3 service workers forbid the dynamic import() ORT uses to load its wasm
+        // glue, so inference runs in an offscreen document instead (see offscreen.ts
+        // and lib/inferenceRPC.ts).
         background: path.join(__dirname, srcDir + 'background.ts'),
         content: path.join(__dirname, srcDir + 'content.ts'),
+        // Offscreen document: a real DOM context (extension origin) where dynamic
+        // import()/WASM are permitted. Owns the onnxruntime-web session.
+        offscreen: path.join(__dirname, srcDir + 'offscreen.ts'),
     },
     output: {
         path: path.join(__dirname, '../dist/js'),
@@ -37,10 +44,12 @@ module.exports = {
         splitChunks: {
             name: 'vendor',
             // The MV3 service worker must be a single self-contained file, so the
-            // background entry is excluded from the shared vendor chunk. popup and
-            // content still share vendor.js.
+            // background entry is excluded from the shared vendor chunk. The
+            // offscreen entry is also excluded so the heavy onnxruntime-web bundle
+            // stays in offscreen.js and never leaks into vendor.js (which content
+            // scripts load into every frame). popup and content share vendor.js.
             chunks(chunk) {
-                return chunk.name !== 'background';
+                return chunk.name !== 'background' && chunk.name !== 'offscreen';
             },
         },
     },

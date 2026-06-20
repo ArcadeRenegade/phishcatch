@@ -34,6 +34,6 @@
       "js": ["js/vendor.js", "js/content.js"]
     }
   ],
-  "permissions": ["storage", "notifications", "alarms", "downloads"],
+  "permissions": ["storage", "notifications", "alarms", "downloads", "offscreen"],
   "host_permissions": ["<all_urls>"]
 }

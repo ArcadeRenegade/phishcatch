@@ -39,12 +39,25 @@ export enum UrlSanitizationEnum {
 }
 
 export interface PageMessage {
-    msgtype: 'username' | 'password' | 'debug' | 'domstring' | 'collectFieldData';
-    content: PasswordContent | UsernameContent | DomstringContent | CollectFieldDataContent | string;
+    msgtype: 'username' | 'password' | 'debug' | 'domstring' | 'collectFieldData' | 'runInference' | 'offscreenInference';
+    content: PasswordContent | UsernameContent | DomstringContent | CollectFieldDataContent | InferenceRequestContent | string;
+    // Set on messages the service worker forwards to the offscreen document so
+    // other extension contexts (popup) ignore them.
+    target?: 'offscreen';
 }
 
 export interface CollectFieldDataContent {
     fields: RawFieldData[];
+}
+
+// Pre-formatted features sent from the content script to the background service
+// worker for ONNX inference. Plain JSON-serializable types only (chrome
+// messaging uses JSON), so booleans are number[] (1/0) - the SW rebuilds the
+// Float32Array. Arrays follow feature_schema boolean_keys / categorical_keys order.
+export interface InferenceRequestContent {
+    booleans: number[];
+    categorical: string[];
+    combined_text: string;
 }
 
 // Flat, human-readable record describing a single interactive text element.

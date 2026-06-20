@@ -111,4 +111,13 @@ if (global.chrome) {
             },
         };
     }
+
+    if (!global.chrome.offscreen) {
+        global.chrome.offscreen = {
+            hasDocument: jest.fn(() => Promise.resolve(false)),
+            createDocument: jest.fn(() => Promise.resolve()),
+            closeDocument: jest.fn(() => Promise.resolve()),
+            Reason: { WORKERS: 'WORKERS' },
+        };
+    }
 }

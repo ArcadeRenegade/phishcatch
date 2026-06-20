@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const { merge } = require('webpack-merge')
-const common = require('./webpack.common.js')
+const { merge } = require('webpack-merge');
+const common = require('./webpack.common.js');
 
 module.exports = merge(common, {
-  devtool: 'inline-source-map',
-  mode: 'development',
-})
+    // External .map files (CSP-safe, no eval) so original TS is debuggable in DevTools.
+    devtool: 'source-map',
+    mode: 'development',
+});

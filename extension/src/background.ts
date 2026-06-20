@@ -18,11 +18,12 @@ import { checkDOMHash, saveDOMHash } from './lib/domhash';
 import { getDomainType } from './lib/getDomainType';
 import { getHostFromUrl } from './lib/getHostFromUrl';
 import { addNotitication, handleNotificationClick } from './lib/handleNotificationClick';
+import { runInference } from './lib/inferenceRPC';
 import { createServerAlert } from './lib/sendAlert';
 import { showCheckmarkIfEnterpriseDomain } from './lib/showCheckmarkIfEnterpriseDomain';
 import { CLEANUP_ALARM_NAME, runScheduledCleanup, timedCleanup } from './lib/timedCleanup';
 import { getHashDataIfItExists, hashAndSavePassword as hashAndSavePassword, removeHash, saveUsername } from './lib/userInfo';
-import { AlertTypes, CollectFieldDataContent, DomainType, DomstringContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
+import { AlertTypes, CollectFieldDataContent, DomainType, DomstringContent, InferenceRequestContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
 
 export async function receiveMessage(message: PageMessage): Promise<void> {
     switch (message.msgtype) {
@@ -119,8 +120,20 @@ async function handlePasswordLeak(message: PasswordContent, hashData: PasswordHa
 // Registered synchronously at the top level so the service worker is woken by
 // these events after it has been terminated for inactivity.
 function setup() {
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    chrome.runtime.onMessage.addListener(receiveMessage);
+    chrome.runtime.onMessage.addListener((message: PageMessage, _sender, sendResponse) => {
+        // RPC inference needs an async response: return true to keep the channel
+        // open and reply via sendResponse.
+        if (message && message.msgtype === 'runInference') {
+            runInference(message.content as InferenceRequestContent)
+                .then(sendResponse)
+                .catch(() => sendResponse(false));
+            return true;
+        }
+
+        // All other messages are fire-and-forget.
+        void receiveMessage(message);
+        return false;
+    });
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     chrome.notifications.onButtonClicked.addListener(handleNotificationClick);
 
