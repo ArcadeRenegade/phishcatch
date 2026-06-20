@@ -39,11 +39,20 @@ export enum UrlSanitizationEnum {
 }
 
 export interface PageMessage {
-    msgtype: 'username' | 'password' | 'debug' | 'domstring' | 'collectFieldData' | 'runInference' | 'offscreenInference';
-    content: PasswordContent | UsernameContent | DomstringContent | CollectFieldDataContent | InferenceRequestContent | string;
+    msgtype: 'username' | 'password' | 'debug' | 'domstring' | 'collectFieldData' | 'runInference' | 'offscreenInference' | 'aiPromptSubmission';
+    content: PasswordContent | UsernameContent | DomstringContent | CollectFieldDataContent | InferenceRequestContent | AiPromptSubmissionContent | string;
     // Set on messages the service worker forwards to the offscreen document so
     // other extension contexts (popup) ignore them.
     target?: 'offscreen';
+}
+
+// Telemetry emitted when a user submits text into an element classified as an AI
+// prompt. Mirrors the password telemetry pattern: the raw typed text is NEVER
+// sent (parity with hashed passwords) - only sanitized metadata is dispatched.
+export interface AiPromptSubmissionContent {
+    url: string;
+    referrer: string;
+    timestamp: number;
 }
 
 export interface CollectFieldDataContent {
@@ -126,6 +135,7 @@ export enum AlertTypes {
     USERREPORT = 'userreport',
     FALSEPOSITIVE = 'falsepositive',
     PERSONALPASSWORD = 'personalpassword',
+    AIPROMPT = 'aiprompt',
 }
 
 export interface AlertContent {

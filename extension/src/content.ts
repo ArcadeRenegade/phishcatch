@@ -17,6 +17,7 @@ import { isBannedUrl, setBannedMessage } from './content-lib/bannedMessage';
 import { initDataCollection } from './content-lib/dataCollection';
 import { debounce } from './content-lib/debounce';
 import { startFieldDetection } from './content-lib/fieldDetection';
+import { initPromptSubmissionTracking } from './content-lib/promptInteractionTracker';
 import { getDomainType } from './lib/getDomainType';
 import { getSanitizedUrl } from './lib/getSanitizedUrl';
 import { DomainType, PasswordContent, UsernameContent } from './types';
@@ -158,6 +159,10 @@ ready(() => {
     // Scrape interactive fields and delegate AI-prompt classification to the
     // background service worker (which owns the ONNX model). No ML runs here.
     startFieldDetection();
+
+    // Watch classified AI prompts for input + submission so confirmed submissions
+    // emit metadata telemetry. Installs capture-phase document listeners once.
+    initPromptSubmissionTracking();
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     setTimeout(async () => {

@@ -15,6 +15,7 @@
 import { InferenceRequestContent, RawFieldData } from '../types';
 import { COLLECTION_SELECTOR, collectFieldData } from './dataCollection';
 import { debounce } from './debounce';
+import { trackPrompt } from './promptInteractionTracker';
 
 // Content-side field-detection SCRAPER. It does NOT run any ML: the service
 // worker owns onnxruntime-web (see lib/inferenceRPC.ts). This module only has
@@ -90,6 +91,8 @@ async function requestClassification(element: HTMLElement, activeSchema: Feature
         const isPrompt = await chrome.runtime.sendMessage({ msgtype: 'runInference', content });
         if (isPrompt === true) {
             console.log('🚨 AI Prompt Detected:', element, raw);
+            // Begin tracking interactions on this prompt so submissions emit telemetry.
+            trackPrompt(element);
         }
     } catch (err) {
         // The service worker may be unavailable (e.g. during reload); ignore.

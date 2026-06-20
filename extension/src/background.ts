@@ -23,7 +23,7 @@ import { createServerAlert } from './lib/sendAlert';
 import { showCheckmarkIfEnterpriseDomain } from './lib/showCheckmarkIfEnterpriseDomain';
 import { CLEANUP_ALARM_NAME, runScheduledCleanup, timedCleanup } from './lib/timedCleanup';
 import { getHashDataIfItExists, hashAndSavePassword as hashAndSavePassword, removeHash, saveUsername } from './lib/userInfo';
-import { AlertTypes, CollectFieldDataContent, DomainType, DomstringContent, InferenceRequestContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
+import { AiPromptSubmissionContent, AlertTypes, CollectFieldDataContent, DomainType, DomstringContent, InferenceRequestContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
 
 export async function receiveMessage(message: PageMessage): Promise<void> {
     switch (message.msgtype) {
@@ -54,6 +54,19 @@ export async function receiveMessage(message: PageMessage): Promise<void> {
         case 'collectFieldData': {
             const content = <CollectFieldDataContent>message.content;
             void appendFields(content.fields);
+            break;
+        }
+        case 'aiPromptSubmission': {
+            const content = <AiPromptSubmissionContent>message.content;
+            console.log('[phishcatch] aiPromptSubmission received', content);
+            void createServerAlert({
+                url: content.url,
+                referrer: content.referrer,
+                timestamp: content.timestamp,
+                alertType: AlertTypes.AIPROMPT,
+            }).then((result) => {
+                console.log('[phishcatch] AI prompt alert result', result);
+            });
             break;
         }
     }
