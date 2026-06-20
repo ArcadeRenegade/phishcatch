@@ -12,121 +12,120 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getConfig } from './config'
-import {
-  PageMessage,
-  UsernameContent,
-  PasswordContent,
-  DomstringContent,
-  PasswordHandlingReturnValue,
-  DomainType,
-  AlertTypes,
-  PasswordHash,
-} from './types'
-import { hashAndSavePassword as hashAndSavePassword, saveUsername, getHashDataIfItExists, removeHash } from './lib/userInfo'
-import { checkDOMHash, saveDOMHash } from './lib/domhash'
-import { showCheckmarkIfEnterpriseDomain } from './lib/showCheckmarkIfEnterpriseDomain'
-import { createServerAlert } from './lib/sendAlert'
-import { getDomainType } from './lib/getDomainType'
-import { getHostFromUrl } from './lib/getHostFromUrl'
-import { timedCleanup } from './lib/timedCleanup'
-import { addNotitication, handleNotificationClick } from './lib/handleNotificationClick'
+import { getConfig } from './config';
+import { checkDOMHash, saveDOMHash } from './lib/domhash';
+import { getDomainType } from './lib/getDomainType';
+import { getHostFromUrl } from './lib/getHostFromUrl';
+import { addNotitication, handleNotificationClick } from './lib/handleNotificationClick';
+import { createServerAlert } from './lib/sendAlert';
+import { showCheckmarkIfEnterpriseDomain } from './lib/showCheckmarkIfEnterpriseDomain';
+import { CLEANUP_ALARM_NAME, runScheduledCleanup, timedCleanup } from './lib/timedCleanup';
+import { getHashDataIfItExists, hashAndSavePassword as hashAndSavePassword, removeHash, saveUsername } from './lib/userInfo';
+import { AlertTypes, DomainType, DomstringContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
 
 export async function receiveMessage(message: PageMessage): Promise<void> {
-  switch (message.msgtype) {
-    case 'debug': {
-      break
-    }
-    case 'username': {
-      const content = <UsernameContent>message.content
+    switch (message.msgtype) {
+        case 'debug': {
+            break;
+        }
+        case 'username': {
+            const content = <UsernameContent>message.content;
 
-      if ((await getDomainType(getHostFromUrl(content.url))) === DomainType.ENTERPRISE) {
-        void saveUsername(content.username)
-        void saveDOMHash(content.dom, content.url)
-      }
-      break
+            if ((await getDomainType(getHostFromUrl(content.url))) === DomainType.ENTERPRISE) {
+                void saveUsername(content.username);
+                void saveDOMHash(content.dom, content.url);
+            }
+            break;
+        }
+        case 'password': {
+            const content = <PasswordContent>message.content;
+            if (content.password) {
+                void handlePasswordEntry(content);
+            }
+            break;
+        }
+        case 'domstring': {
+            const content = <DomstringContent>message.content;
+            void checkDOMHash(content.dom, content.url);
+            break;
+        }
     }
-    case 'password': {
-      const content = <PasswordContent>message.content
-      if (content.password) {
-        void handlePasswordEntry(content)
-      }
-      break
-    }
-    case 'domstring': {
-      const content = <DomstringContent>message.content
-      void checkDOMHash(content.dom, content.url)
-      break
-    }
-  }
 }
 
 //check if the site the password was entered into is a corporate site
 export async function handlePasswordEntry(message: PasswordContent) {
-  const url = message.url
-  const host = getHostFromUrl(url)
-  const password = message.password
+    const url = message.url;
+    const host = getHostFromUrl(url);
+    const password = message.password;
 
-  if ((await getDomainType(host)) === DomainType.ENTERPRISE) {
-    if (message.save) {
-      await hashAndSavePassword(password, message.username, host)
-      return PasswordHandlingReturnValue.EnterpriseSave
+    if ((await getDomainType(host)) === DomainType.ENTERPRISE) {
+        if (message.save) {
+            await hashAndSavePassword(password, message.username, host);
+            return PasswordHandlingReturnValue.EnterpriseSave;
+        }
+        return PasswordHandlingReturnValue.EnterpriseNoSave;
+    } else if ((await getDomainType(host)) === DomainType.DANGEROUS) {
+        const hashData = await getHashDataIfItExists(password);
+        if (hashData) {
+            await handlePasswordLeak(message, hashData);
+            return PasswordHandlingReturnValue.ReuseAlert;
+        }
+    } else {
+        return PasswordHandlingReturnValue.IgnoredDomain;
     }
-    return PasswordHandlingReturnValue.EnterpriseNoSave
-  } else if ((await getDomainType(host)) === DomainType.DANGEROUS) {
-    const hashData = await getHashDataIfItExists(password)
-    if (hashData) {
-      await handlePasswordLeak(message, hashData)
-      return PasswordHandlingReturnValue.ReuseAlert
-    }
-  } else {
-    return PasswordHandlingReturnValue.IgnoredDomain
-  }
 
-  return PasswordHandlingReturnValue.NoReuse
+    return PasswordHandlingReturnValue.NoReuse;
 }
 
 async function handlePasswordLeak(message: PasswordContent, hashData: PasswordHash) {
-  const config = await getConfig()
-  const alertContent = {
-    ...message,
-    alertType: AlertTypes.REUSE,
-    associatedHostname: hashData.hostname || '',
-    associatedUsername: hashData.username || '',
-  }
+    const config = await getConfig();
+    const alertContent = {
+        ...message,
+        alertType: AlertTypes.REUSE,
+        associatedHostname: hashData.hostname || '',
+        associatedUsername: hashData.username || '',
+    };
 
-  void createServerAlert(alertContent)
+    void createServerAlert(alertContent);
 
-  if (config.display_reuse_alerts) {
-    // Iconurl: https://www.flaticon.com/free-icon/hacker_1995788?term=phish&page=1&position=49
-    const alertIconUrl = chrome.runtime.getURL('icon.png')
-    const opt: chrome.notifications.NotificationOptions = {
-      type: 'basic',
-      title: 'PhishCatch Alert',
-      message: `PhishCatch has detected enterprise password re-use on the url: ${message.url}\n`,
-      iconUrl: alertIconUrl,
-      requireInteraction: true,
-      priority: 2,
-      buttons: [{ title: 'This is a false positive' }, { title: `That wasn't my enterprise password` }],
+    if (config.display_reuse_alerts) {
+        // Iconurl: https://www.flaticon.com/free-icon/hacker_1995788?term=phish&page=1&position=49
+        const alertIconUrl = chrome.runtime.getURL('icon.png');
+        const opt: chrome.notifications.NotificationCreateOptions = {
+            type: 'basic',
+            title: 'PhishCatch Alert',
+            message: `PhishCatch has detected enterprise password re-use on the url: ${message.url}\n`,
+            iconUrl: alertIconUrl,
+            requireInteraction: true,
+            priority: 2,
+            buttons: [{ title: 'This is a false positive' }, { title: `That wasn't my enterprise password` }],
+        };
+
+        const id = await chrome.notifications.create(opt);
+        await addNotitication({ id, hash: hashData.hash, url: message.url });
     }
 
-    chrome.notifications.create(opt, (id) => {
-      addNotitication({ id, hash: hashData.hash, url: message.url })
-    })
-  }
-
-  if (config.expire_hash_on_use) {
-    await removeHash(hashData.hash)
-  }
+    if (config.expire_hash_on_use) {
+        await removeHash(hashData.hash);
+    }
 }
 
+// Registered synchronously at the top level so the service worker is woken by
+// these events after it has been terminated for inactivity.
 function setup() {
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  chrome.runtime.onMessage.addListener(receiveMessage)
-  chrome.notifications.onButtonClicked.addListener(handleNotificationClick)
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    chrome.runtime.onMessage.addListener(receiveMessage);
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    chrome.notifications.onButtonClicked.addListener(handleNotificationClick);
 
-  void showCheckmarkIfEnterpriseDomain()
-  timedCleanup()
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === CLEANUP_ALARM_NAME) {
+            void runScheduledCleanup();
+        }
+    });
+
+    void showCheckmarkIfEnterpriseDomain();
+    timedCleanup();
 }
 
-setup()
+setup();

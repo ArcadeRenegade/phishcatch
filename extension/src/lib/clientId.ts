@@ -11,30 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getSalt } from './generateHash'
+import { getSalt } from './generateHash';
 
 export function generateId() {
-  return getSalt()
+    return getSalt();
 }
 
 export async function saveId(id: string) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ clientId: id }, () => {
-      resolve(true)
-    })
-  })
+    await chrome.storage.local.set({ clientId: id });
+    return true;
 }
 
-export function getId(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get('clientId', (data) => {
-      if (!data.clientId) {
-        const newId = generateId()
-        void saveId(newId)
-        resolve(newId)
-      } else {
-        resolve(data.clientId)
-      }
-    })
-  })
+export async function getId(): Promise<string> {
+    const data = await chrome.storage.local.get('clientId');
+    if (!data.clientId) {
+        const newId = generateId();
+        void saveId(newId);
+        return newId;
+    }
+
+    return data.clientId as string;
 }

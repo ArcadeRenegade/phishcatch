@@ -12,34 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { DomainType } from '../types'
-import { getHostFromUrl } from './getHostFromUrl'
-import { getDomainType } from './getDomainType'
+import { DomainType } from '../types';
+import { getDomainType } from './getDomainType';
+import { getHostFromUrl } from './getHostFromUrl';
 
 async function updateBadge(tab: chrome.tabs.Tab) {
-  if (tab.active && tab.url) {
-    const host = getHostFromUrl(tab.url)
+    if (tab.active && tab.url) {
+        const host = getHostFromUrl(tab.url);
 
-    if ((await getDomainType(host)) === DomainType.ENTERPRISE) {
-      chrome.browserAction.setBadgeText({ text: '✅' })
-    } else {
-      chrome.browserAction.setBadgeText({ text: '' })
+        if ((await getDomainType(host)) === DomainType.ENTERPRISE) {
+            void chrome.action.setBadgeText({ text: '✅' });
+        } else {
+            void chrome.action.setBadgeText({ text: '' });
+        }
     }
-  }
 }
 
 export function showCheckmarkIfEnterpriseDomain() {
-  try {
-    chrome.browserAction.setBadgeBackgroundColor({ color: 'green' })
-    chrome.tabs.onUpdated.addListener((tabID, change, tab) => {
-      void updateBadge(tab)
-    })
-    chrome.tabs.onActivated.addListener((activeInfo) => {
-      chrome.tabs.get(activeInfo.tabId, (tab) => {
-        void updateBadge(tab)
-      })
-    })
-  } catch (e) {
-    // https://github.com/clarkbw/jest-webextension-mock/pull/127
-  }
+    try {
+        void chrome.action.setBadgeBackgroundColor({ color: 'green' });
+        chrome.tabs.onUpdated.addListener((tabID, change, tab) => {
+            void updateBadge(tab);
+        });
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        chrome.tabs.onActivated.addListener(async (activeInfo) => {
+            const tab = await chrome.tabs.get(activeInfo.tabId);
+            void updateBadge(tab);
+        });
+    } catch (e) {
+        // https://github.com/clarkbw/jest-webextension-mock/pull/127
+    }
 }

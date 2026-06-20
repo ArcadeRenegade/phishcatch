@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as React from 'react'
-import { Button, Card, Tooltip } from '@blueprintjs/core'
-import { popupStore } from './mobx/popupState'
-import { reportPhishingStore } from './mobx/reportPhishingState'
-import { ReportPhishingPopup } from './reportPhishingPopup'
-import { ManualPasswordForm } from './manualPasswordForm'
-import { ManualUsernameForm } from './manualUsernameForm'
-import { manualPasswordStore } from './mobx/manualPasswordState'
-import { manualUsernameStore } from './mobx/manualUsernameState'
+
+
+import { Button, Card, Tooltip } from '@blueprintjs/core';
+
+import { ManualPasswordForm } from './manualPasswordForm';
+import { ManualUsernameForm } from './manualUsernameForm';
+import { manualPasswordStore } from './mobx/manualPasswordState';
+import { manualUsernameStore } from './mobx/manualUsernameState';
+import { popupStore } from './mobx/popupState';
+import { reportPhishingStore } from './mobx/reportPhishingState';
+import { ReportPhishingPopup } from './reportPhishingPopup';
 
 export function Home() {
   return (
@@ -74,11 +76,10 @@ export function Home() {
         <Button
           intent="danger"
           onClick={() => {
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            chrome.storage.local.clear(async () => {
+            void (async () => {
               await popupStore.clearStorage()
               await popupStore.loadConfig()
-            })
+            })()
           }}
           icon={'trash'}
         >

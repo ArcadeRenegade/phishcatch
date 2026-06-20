@@ -12,53 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const path = require('path')
+const path = require('path');
 const webpack = require('webpack');
-const CopyPlugin = require('copy-webpack-plugin')
-const srcDir = '../src/'
+const CopyPlugin = require('copy-webpack-plugin');
+const srcDir = '../src/';
 
 module.exports = {
-  entry: {
-    popup: path.join(__dirname, srcDir + 'popup.tsx'),
-    background: path.join(__dirname, srcDir + 'background.ts'),
-    content: path.join(__dirname, srcDir + 'content.ts'),
-  },
-  output: {
-    path: path.join(__dirname, '../dist/js'),
-    filename: '[name].js',
-    hashFunction: 'xxhash64',
-  },
-  optimization: {
-    splitChunks: {
-      name: 'vendor',
-      chunks: 'initial',
+    entry: {
+        popup: path.join(__dirname, srcDir + 'popup.tsx'),
+        background: path.join(__dirname, srcDir + 'background.ts'),
+        content: path.join(__dirname, srcDir + 'content.ts'),
     },
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
+    output: {
+        path: path.join(__dirname, '../dist/js'),
+        filename: '[name].js',
+        hashFunction: 'xxhash64',
+    },
+    optimization: {
+        splitChunks: {
+            name: 'vendor',
+            // The MV3 service worker must be a single self-contained file, so the
+            // background entry is excluded from the shared vendor chunk. popup and
+            // content still share vendor.js.
+            chunks(chunk) {
+                return chunk.name !== 'background';
+            },
+        },
+    },
+    module: {
+        rules: [
+            {
+                test: /\.tsx?$/,
+                use: 'ts-loader',
+                exclude: /node_modules/,
+            },
+        ],
+    },
+    resolve: {
+        extensions: ['.ts', '.tsx', '.js'],
+        fallback: {
+            "buffer": require.resolve('buffer/'),
+            'util': require.resolve('util/')
+        }
+    },
+    plugins: [
+        new webpack.ProvidePlugin({
+            process: 'process/browser',
+            Buffer: ['buffer', 'Buffer'],
+        }),
+        new CopyPlugin({
+            // patterns: [{ from: './public/', to: './' }],
+            patterns: [{ from: '.', to: '../', context: 'public' }],
+            options: {},
+        }),
     ],
-  },
-  resolve: {
-    extensions: ['.ts', '.tsx', '.js'],
-    fallback: {
-      "buffer": require.resolve('buffer/'),
-      'util': require.resolve('util/')
-    }
-  },
-  plugins: [
-    new webpack.ProvidePlugin({
-      process: 'process/browser',
-      Buffer: ['buffer', 'Buffer'],
-    }),
-    new CopyPlugin({
-      // patterns: [{ from: './public/', to: './' }],
-      patterns: [{ from: '.', to: '../', context: 'public' }],
-      options: {},
-    }),
-  ],
-}
+};

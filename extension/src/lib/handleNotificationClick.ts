@@ -12,57 +12,83 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { AlertTypes, NotificationData } from '../types'
-import { removeHash } from './userInfo'
-import { createServerAlert } from './sendAlert'
+import { AlertTypes, NotificationData } from '../types';
+import { createServerAlert } from './sendAlert';
+import { removeHash } from './userInfo';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-const notificationStorage: Map<string, NotificationData> = new Map()
+// MV3 service workers are terminated after ~30s of inactivity, so notification
+// metadata cannot live in a module-level Map - it would be empty by the time
+// the user clicks a button, silently skipping false-positive reporting and hash
+// removal. Persist it in chrome.storage.session (in-memory, MV3-native, cleared
+// when the browser closes), falling back to chrome.storage.local where session
+// storage is unavailable. Mirrors the dedup cache pattern in sendAlert.ts.
+const NOTIFICATION_STORAGE_KEY = 'notificationData';
 
-export function addNotitication(data: NotificationData) {
-  notificationStorage.set(data.id, data)
+function getNotificationStore(): chrome.storage.StorageArea {
+    return chrome.storage.session || chrome.storage.local;
 }
 
-export function handleNotificationClick(notifId: string, btnId: number) {
-  const notificationData = notificationStorage.get(notifId)
-  if (notificationData) {
-    const alertIconUrl = chrome.runtime.getURL('icon.png')
-    if (btnId === 0) {
-      const opt: chrome.notifications.NotificationOptions = {
-        type: 'basic',
-        title: 'PhishCatch Alert',
-        message: `Reporting false positive and removing matched password`,
-        iconUrl: alertIconUrl,
-        priority: 2,
-      }
+async function getNotifications(): Promise<Record<string, NotificationData>> {
+    const data = await getNotificationStore().get(NOTIFICATION_STORAGE_KEY);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    return (data[NOTIFICATION_STORAGE_KEY] as Record<string, NotificationData>) || {};
+}
 
-      chrome.notifications.create(opt)
+async function setNotifications(notifications: Record<string, NotificationData>): Promise<void> {
+    await getNotificationStore().set({ [NOTIFICATION_STORAGE_KEY]: notifications });
+}
 
-      void createServerAlert({
-        referrer: '',
-        url: notificationData.url,
-        timestamp: new Date().getTime(),
-        alertType: AlertTypes.FALSEPOSITIVE,
-      })
-    } else if (btnId === 1) {
-      const opt: chrome.notifications.NotificationOptions = {
-        type: 'basic',
-        title: 'PhishCatch Alert',
-        message: `Removing matched password`,
-        iconUrl: alertIconUrl,
-        priority: 2,
-      }
+export async function addNotitication(data: NotificationData) {
+    const notifications = await getNotifications();
+    notifications[data.id] = data;
+    await setNotifications(notifications);
+}
 
-      chrome.notifications.create(opt)
+export async function handleNotificationClick(notifId: string, btnId: number) {
+    const notifications = await getNotifications();
+    const notificationData = notifications[notifId];
+    if (notificationData) {
+        const alertIconUrl = chrome.runtime.getURL('icon.png');
+        if (btnId === 0) {
+            const opt: chrome.notifications.NotificationCreateOptions = {
+                type: 'basic',
+                title: 'PhishCatch Alert',
+                message: `Reporting false positive and removing matched password`,
+                iconUrl: alertIconUrl,
+                priority: 2,
+            };
 
-      void createServerAlert({
-        referrer: '',
-        url: notificationData.url,
-        timestamp: new Date().getTime(),
-        alertType: AlertTypes.FALSEPOSITIVE,
-      })
+            void chrome.notifications.create(opt);
+
+            void createServerAlert({
+                referrer: '',
+                url: notificationData.url,
+                timestamp: new Date().getTime(),
+                alertType: AlertTypes.FALSEPOSITIVE,
+            });
+        } else if (btnId === 1) {
+            const opt: chrome.notifications.NotificationCreateOptions = {
+                type: 'basic',
+                title: 'PhishCatch Alert',
+                message: `Removing matched password`,
+                iconUrl: alertIconUrl,
+                priority: 2,
+            };
+
+            void chrome.notifications.create(opt);
+
+            void createServerAlert({
+                referrer: '',
+                url: notificationData.url,
+                timestamp: new Date().getTime(),
+                alertType: AlertTypes.FALSEPOSITIVE,
+            });
+        }
+
+        void removeHash(notificationData.hash);
+
+        // Remove the consumed entry so the persisted store does not grow unbounded.
+        delete notifications[notifId];
+        await setNotifications(notifications);
     }
-
-    void removeHash(notificationData.hash)
-  }
 }

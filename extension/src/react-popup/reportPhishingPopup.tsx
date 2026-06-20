@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as React from 'react'
-import { Alert, Intent } from '@blueprintjs/core'
-import { observer } from 'mobx-react'
-import { reportPhishingStore } from './mobx/reportPhishingState'
+import { observer } from 'mobx-react';
+
+import { Alert, Intent } from '@blueprintjs/core';
+
+import { reportPhishingStore } from './mobx/reportPhishingState';
 
 export const ReportPhishingPopup = observer(() => {
   return (
@@ -29,7 +30,7 @@ export const ReportPhishingPopup = observer(() => {
       canOutsideClickCancel={true}
       confirmButtonText={'This is phishing'}
       onConfirm={() => {
-        reportPhishingStore.createReport()
+        void reportPhishingStore.createReport()
       }}
       intent={Intent.PRIMARY}
       icon={'warning-sign'}

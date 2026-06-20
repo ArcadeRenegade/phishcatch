@@ -12,52 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { observable } from 'mobx'
-import { getHashesAsTlshInstances } from '../../lib/domhash'
-import { getUnsentAlerts } from '../../lib/sendAlert'
-import { getPasswordHashes, getUsernames } from '../../lib/userInfo'
-import { getConfig } from '../../config'
-import { Prefs } from '../../types'
-import { AppToaster } from '../toaster'
+import { observable } from 'mobx';
+
+import { getConfig } from '../../config';
+import { getHashesAsTlshInstances } from '../../lib/domhash';
+import { getUnsentAlerts } from '../../lib/sendAlert';
+import { getPasswordHashes, getUsernames } from '../../lib/userInfo';
+import { Prefs } from '../../types';
+import { AppToaster } from '../toaster';
 
 class StorageState {
-  @observable showDebug = false
-  @observable configReady = false
-  @observable config: Prefs
-  @observable usernameList: string[] = []
-  @observable passwordHashList: string[] = []
-  @observable domHashList: string[] = []
-  @observable numberOfUnsentAlerts = 0
+    @observable showDebug = false;
+    @observable configReady = false;
+    @observable config: Prefs;
+    @observable usernameList: string[] = [];
+    @observable passwordHashList: string[] = [];
+    @observable domHashList: string[] = [];
+    @observable numberOfUnsentAlerts = 0;
 
-  constructor() {
-    void this.loadConfig()
-  }
+    constructor() {
+        void this.loadConfig();
+    }
 
-  async loadConfig() {
-    this.config = await getConfig()
-    const passwordHashList = (await getPasswordHashes()).map((hash) => {
-      return JSON.stringify({ ...hash, hash: hash.hash.substring(0, 15) + '...' }, null, 2)
-    })
+    async loadConfig() {
+        this.config = await getConfig();
+        const passwordHashList = (await getPasswordHashes()).map((hash) => {
+            return JSON.stringify({ ...hash, hash: hash.hash.substring(0, 15) + '...' }, null, 2);
+        });
 
-    const domHashList: string[] = (await getHashesAsTlshInstances()).map((instance) => {
-      return instance.hash().substring(0, 15) + '...'
-    })
+        const domHashList: string[] = (await getHashesAsTlshInstances()).map((instance) => {
+            return instance.hash().substring(0, 15) + '...';
+        });
 
-    this.usernameList = (await getUsernames()).map((username) => username.username)
-    this.passwordHashList = passwordHashList
-    this.domHashList = domHashList
-    this.numberOfUnsentAlerts = (await getUnsentAlerts()).length
-    this.configReady = true
-  }
+        this.usernameList = (await getUsernames()).map((username) => username.username);
+        this.passwordHashList = passwordHashList;
+        this.domHashList = domHashList;
+        this.numberOfUnsentAlerts = (await getUnsentAlerts()).length;
+        this.configReady = true;
+    }
 
-  async clearStorage() {
-    return new Promise((resolve) => {
-      chrome.storage.local.clear(() => {
-        AppToaster.show({ message: 'Cleared local storage!', intent: 'success' })
-        resolve(true)
-      })
-    })
-  }
+    async clearStorage() {
+        await chrome.storage.local.clear();
+        AppToaster.show({ message: 'Cleared local storage!', intent: 'success' });
+        return true;
+    }
 }
 
-export const popupStore = new StorageState()
+export const popupStore = new StorageState();

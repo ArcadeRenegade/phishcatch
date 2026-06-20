@@ -12,143 +12,133 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import TlshConstructor from './tlsh'
-import { getConfig } from '../config'
-import { DomainType, TLSHInstance, DatedDomHash, AlertTypes } from '../types'
-import { getDomainType } from './getDomainType'
-import { createServerAlert } from './sendAlert'
-import { getHostFromUrl } from './getHostFromUrl'
+import { getConfig } from '../config';
+import { AlertTypes, DatedDomHash, DomainType, TLSHInstance } from '../types';
+import { getDomainType } from './getDomainType';
+import { getHostFromUrl } from './getHostFromUrl';
+import { createServerAlert } from './sendAlert';
+import TlshConstructor from './tlsh';
 
 // these indicate an error in tlsh
 const forbiddenHashes = new Set([
-  '0000000000000000000000000000000000000000000000000000000000000000000000',
-  'ERROR IN PROCESSING',
-])
+    '0000000000000000000000000000000000000000000000000000000000000000000000',
+    'ERROR IN PROCESSING',
+]);
 
 export function getTlshInstance(str: string) {
-  const instance = TlshConstructor()
-  instance.update(str)
-  instance.finale()
+    const instance = TlshConstructor();
+    instance.update(str);
+    instance.finale();
 
-  return instance
+    return instance;
 }
 
 export async function alertUser(host: string) {
-  const config = await getConfig()
+    const config = await getConfig();
 
-  void createServerAlert({
-    timestamp: new Date().getTime(),
-    alertType: AlertTypes.DOMHASH,
-    referrer: '',
-    url: host,
-  })
+    void createServerAlert({
+        timestamp: new Date().getTime(),
+        alertType: AlertTypes.DOMHASH,
+        referrer: '',
+        url: host,
+    });
 
-  if (config.display_reuse_alerts) {
-    // Iconurl: https://www.flaticon.com/free-icon/hacker_1995788?term=phish&page=1&position=49
-    const alertIconUrl = chrome.runtime.getURL('icon.png')
-    const opt = {
-      type: 'basic',
-      title: 'PhishCatch Alert',
-      message: `PhishCatch has detected a likely phishing page at: ${host}\n`,
-      iconUrl: alertIconUrl,
+    if (config.display_reuse_alerts) {
+        // Iconurl: https://www.flaticon.com/free-icon/hacker_1995788?term=phish&page=1&position=49
+        const alertIconUrl = chrome.runtime.getURL('icon.png');
+        const opt: chrome.notifications.NotificationCreateOptions = {
+            type: 'basic',
+            title: 'PhishCatch Alert',
+            message: `PhishCatch has detected a likely phishing page at: ${host}\n`,
+            iconUrl: alertIconUrl,
+        };
+
+        void chrome.notifications.create(opt);
     }
-
-    chrome.notifications.create(opt)
-  }
 }
 
 export function loadTlshInstanceFromHash(hash: string) {
-  const instance = TlshConstructor()
-  instance.fromTlshStr(hash)
-  return instance
+    const instance = TlshConstructor();
+    instance.fromTlshStr(hash);
+    return instance;
 }
 
 export function hashesMatch(firstInstance: TLSHInstance, secondInstance: TLSHInstance, minDistance = 100) {
-  const distance = firstInstance.totalDiff(secondInstance)
+    const distance = firstInstance.totalDiff(secondInstance);
 
-  return distance < minDistance
+    return distance < minDistance;
 }
 
 export async function saveDOMHash(dom: string, url: string) {
-  if (!dom) {
-    return
-  }
-
-  const instance = getTlshInstance(dom)
-  const currentHash = instance.hash()
-  if (forbiddenHashes.has(currentHash)) {
-    console.error('hit a forbidden hash, not saving', currentHash)
-    throw new Error('Forbidden hash!')
-  }
-
-  const savedDatedHashes = await getSavedDomHashes()
-
-  const currentHashes = savedDatedHashes.map((hash) => {
-    return loadTlshInstanceFromHash(hash.hash)
-  })
-
-  const existingHashIndex = currentHashes.findIndex((storedInstance) => {
-    if (storedInstance.hash() === currentHash) {
-      return true
+    if (!dom) {
+        return;
     }
-    return hashesMatch(storedInstance, instance)
-  })
 
-  return new Promise((resolve) => {
+    const instance = getTlshInstance(dom);
+    const currentHash = instance.hash();
+    if (forbiddenHashes.has(currentHash)) {
+        console.error('hit a forbidden hash, not saving', currentHash);
+        throw new Error('Forbidden hash!');
+    }
+
+    const savedDatedHashes = await getSavedDomHashes();
+
+    const currentHashes = savedDatedHashes.map((hash) => {
+        return loadTlshInstanceFromHash(hash.hash);
+    });
+
+    const existingHashIndex = currentHashes.findIndex((storedInstance) => {
+        if (storedInstance.hash() === currentHash) {
+            return true;
+        }
+        return hashesMatch(storedInstance, instance);
+    });
+
     if (existingHashIndex !== -1) {
-      savedDatedHashes[existingHashIndex].dateAdded = new Date().getTime()
-      resolve(true)
-    } else {
-      savedDatedHashes.push({ hash: currentHash, dateAdded: new Date().getTime(), source: getHostFromUrl(url) })
-
-      chrome.storage.local.set({ datedDomHashes: savedDatedHashes }, () => {
-        resolve(true)
-      })
+        savedDatedHashes[existingHashIndex].dateAdded = new Date().getTime();
+        return true;
     }
-  })
+
+    savedDatedHashes.push({ hash: currentHash, dateAdded: new Date().getTime(), source: getHostFromUrl(url) });
+    await chrome.storage.local.set({ datedDomHashes: savedDatedHashes });
+    return true;
 }
 
 export async function getSavedDomHashes(): Promise<DatedDomHash[]> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('datedDomHashes', (data: { datedDomHashes: DatedDomHash[] | undefined }) => {
-      const hashes: DatedDomHash[] = data.datedDomHashes || []
-      if (!data.datedDomHashes) {
-        chrome.storage.local.set({ datedDomHashes: hashes }, () => {
-          resolve(hashes)
-        })
-      } else {
-        resolve(hashes)
-      }
-    })
-  })
+    const data = (await chrome.storage.local.get('datedDomHashes')) as { datedDomHashes: DatedDomHash[] | undefined; };
+    const hashes: DatedDomHash[] = data.datedDomHashes || [];
+    if (!data.datedDomHashes) {
+        await chrome.storage.local.set({ datedDomHashes: hashes });
+    }
+    return hashes;
 }
 
 export async function getHashesAsTlshInstances(): Promise<TLSHInstance[]> {
-  const currentHashes = await getSavedDomHashes()
+    const currentHashes = await getSavedDomHashes();
 
-  return currentHashes.map((hash: DatedDomHash) => {
-    return loadTlshInstanceFromHash(hash.hash)
-  })
+    return currentHashes.map((hash: DatedDomHash) => {
+        return loadTlshInstanceFromHash(hash.hash);
+    });
 }
 
 export async function checkDOMHash(dom: string, url: string) {
-  if (!dom) {
-    throw 'No dom'
-  }
-  const host = getHostFromUrl(url)
-
-  const domainType = await getDomainType(host)
-
-  if (domainType === DomainType.DANGEROUS) {
-    const newInstance: TLSHInstance = getTlshInstance(dom)
-    const domHashes = await getHashesAsTlshInstances()
-    if (domHashes.some((corporateInstance) => hashesMatch(corporateInstance, newInstance))) {
-      await alertUser(url)
-      return true
+    if (!dom) {
+        throw 'No dom';
     }
-  } else if (domainType === DomainType.ENTERPRISE) {
-    void saveDOMHash(dom, url)
-  }
+    const host = getHostFromUrl(url);
 
-  return false
+    const domainType = await getDomainType(host);
+
+    if (domainType === DomainType.DANGEROUS) {
+        const newInstance: TLSHInstance = getTlshInstance(dom);
+        const domHashes = await getHashesAsTlshInstances();
+        if (domHashes.some((corporateInstance) => hashesMatch(corporateInstance, newInstance))) {
+            await alertUser(url);
+            return true;
+        }
+    } else if (domainType === DomainType.ENTERPRISE) {
+        void saveDOMHash(dom, url);
+    }
+
+    return false;
 }

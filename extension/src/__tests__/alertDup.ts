@@ -12,41 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { checkIfDup } from '../lib/sendAlert'
-import { AlertContent, AlertTypes } from '../types'
+import { checkIfDup } from '../lib/sendAlert';
+import { AlertContent, AlertTypes } from '../types';
 
-jest.setTimeout(60000)
+jest.setTimeout(60000);
 
 const alertOne: AlertContent = {
-  url: 'efefef',
-  referrer: 'efffd',
-  timestamp: 1234,
-  alertType: AlertTypes.DOMHASH,
-  associatedUsername: 'fefelmrg',
-  associatedHostname: 'fefe',
-}
+    url: 'efefef',
+    referrer: 'efffd',
+    timestamp: 1234,
+    alertType: AlertTypes.DOMHASH,
+    associatedUsername: 'fefelmrg',
+    associatedHostname: 'fefe',
+};
 const alertTwo: AlertContent = {
-  url: '4894jre.com',
-  referrer: 'efkef',
-  timestamp: 12345,
-  alertType: AlertTypes.FALSEPOSITIVE,
-  associatedUsername: 'fefelmrg',
-  associatedHostname: 'fefe',
-}
+    url: '4894jre.com',
+    referrer: 'efkef',
+    timestamp: 12345,
+    alertType: AlertTypes.FALSEPOSITIVE,
+    associatedUsername: 'fefelmrg',
+    associatedHostname: 'fefe',
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+beforeEach(async () => {
+    await chrome.storage.session.clear();
+});
 
 describe('Duplicate alerts should not be sent within 30 seconds', () => {
-  it('Properly detect duplicate alerts', (callback) => {
-    expect(checkIfDup(alertOne)).toEqual(false)
+    it('Properly detect duplicate alerts', async () => {
+        expect(await checkIfDup(alertOne)).toEqual(false);
 
-    setTimeout(() => {
-      expect(checkIfDup(alertOne)).toEqual(true)
-      expect(checkIfDup(alertTwo)).toEqual(false)
-    }, 15 * 1000)
+        await wait(15 * 1000);
+        expect(await checkIfDup(alertOne)).toEqual(true);
+        expect(await checkIfDup(alertTwo)).toEqual(false);
 
-    setTimeout(() => {
-      expect(checkIfDup(alertOne)).toEqual(false)
-      expect(checkIfDup(alertTwo)).toEqual(true)
-      callback()
-    }, 31 * 1000)
-  })
-})
+        await wait(16 * 1000);
+        expect(await checkIfDup(alertOne)).toEqual(false);
+        expect(await checkIfDup(alertTwo)).toEqual(true);
+    });
+});

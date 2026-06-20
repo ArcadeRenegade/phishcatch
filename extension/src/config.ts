@@ -13,130 +13,117 @@
 // limitations under the License.
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { dateDiffInDays } from './lib/timedCleanup';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Prefs, UrlSanitizationEnum } from './types'
-import { dateDiffInDays } from './lib/timedCleanup'
+import { Prefs, UrlSanitizationEnum } from './types';
 
 interface configCache {
-  config: Prefs
-  timestamp: Date
+    config: Prefs;
+    timestamp: Date;
 }
 
 const defaults: Prefs = {
-  data_expiry: 30,
-  display_reuse_alerts: true,
-  enable_debug_gui: true,
-  enterprise_domains: [],
-  expire_hash_on_use: true,
-  faq_link: null,
-  hash_truncation_amount: 0,
-  ignored_domains: [],
-  manual_password_entry: false,
-  pbkdf2_iterations: 100000,
-  phishcatch_server: '',
-  psk: '',
-  repo_link: null,
-  url_sanitization_level: UrlSanitizationEnum.host,
-  username_regexes: [],
-  username_selectors: [],
-  banned_urls: [],
-}
+    data_expiry: 30,
+    display_reuse_alerts: true,
+    enable_debug_gui: true,
+    enterprise_domains: [],
+    expire_hash_on_use: true,
+    faq_link: null,
+    hash_truncation_amount: 0,
+    ignored_domains: [],
+    manual_password_entry: false,
+    pbkdf2_iterations: 100000,
+    phishcatch_server: '',
+    psk: '',
+    repo_link: null,
+    url_sanitization_level: UrlSanitizationEnum.host,
+    username_regexes: [],
+    username_selectors: [],
+    banned_urls: [],
+};
 
-let configCache: configCache | false = false
+let configCache: configCache | false = false;
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'managed') {
-    clearCache()
-  }
-})
+    if (areaName === 'managed') {
+        clearCache();
+    }
+});
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export async function setConfigOverride(newConfig: Object) {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.local.set({ configOverride: newConfig }, () => {
-        clearCache()
-        resolve(true)
-      })
-    } catch (e) {
-      reject()
-    }
-  })
+    await chrome.storage.local.set({ configOverride: newConfig });
+    clearCache();
+    return true;
 }
 
 export async function clearConfigOverride() {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ configOverride: false }, () => {
-      resolve(true)
-    })
-  })
+    await chrome.storage.local.set({ configOverride: false });
+    return true;
 }
 
 export async function getConfigOverride(): Promise<Prefs | false> {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('configOverride', (data) => {
-      if (data.configOverride) {
-        const prefs = { ...defaults }
+    const data = (await chrome.storage.local.get('configOverride')) as {
+        configOverride?: Record<string, unknown> | false;
+    };
+    if (data.configOverride) {
+        const prefs = { ...defaults };
+        const configOverride = data.configOverride;
 
-        Object.keys(data.configOverride).forEach((key) => {
-          const value = data.configOverride[key]
-          if (value || value === false) {
-            ;(prefs as any)[key] = value
-          }
-        })
-        resolve(prefs)
-      } else {
-        resolve(false)
-      }
-    })
-  })
+        Object.keys(configOverride).forEach((key) => {
+            const value = configOverride[key];
+            if (value || value === false) {
+                ; (prefs as any)[key] = value;
+            }
+        });
+        return prefs;
+    }
+
+    return false;
 }
 
 async function getManagedPreferences(): Promise<Prefs> {
-  const prefs = { ...defaults }
+    const prefs = { ...defaults };
 
-  return new Promise((resolve) => {
-    chrome.storage.managed.get(Object.keys(prefs), (storedPrefs: Prefs) => {
-      Object.keys(storedPrefs).forEach((key) => {
-        const value = (storedPrefs as any)[key]
+    const storedPrefs = (await chrome.storage.managed.get(Object.keys(prefs) as (keyof Prefs)[])) as Prefs;
+    Object.keys(storedPrefs).forEach((key) => {
+        const value = (storedPrefs as any)[key];
         if (value || value === false) {
-          ;(prefs as any)[key] = value
+            ; (prefs as any)[key] = value;
         }
-      })
+    });
 
-      resolve(prefs)
-    })
-  })
+    return prefs;
 }
 
 export function clearCache() {
-  configCache = false
+    configCache = false;
 }
 
 export async function getConfig(): Promise<Prefs> {
-  if (configCache) {
-    const cacheAgeInMinutes = dateDiffInDays(new Date().getTime(), configCache.timestamp.getTime())
-    if (cacheAgeInMinutes < 10) {
-      return configCache.config
-    } else {
-      clearCache()
+    if (configCache) {
+        const cacheAgeInMinutes = dateDiffInDays(new Date().getTime(), configCache.timestamp.getTime());
+        if (cacheAgeInMinutes < 10) {
+            return configCache.config;
+        } else {
+            clearCache();
+        }
     }
-  }
 
-  const configs = await Promise.all([getManagedPreferences(), getConfigOverride()])
-  const managedConfig = configs[0]
-  const configOverride = configs[1]
+    const configs = await Promise.all([getManagedPreferences(), getConfigOverride()]);
+    const managedConfig = configs[0];
+    const configOverride = configs[1];
 
-  let config: Prefs
-  if (configOverride) {
-    config = configOverride
-  } else {
-    config = managedConfig
-  }
+    let config: Prefs;
+    if (configOverride) {
+        config = configOverride;
+    } else {
+        config = managedConfig;
+    }
 
-  configCache = {
-    config,
-    timestamp: new Date(),
-  }
-  return config
+    configCache = {
+        config,
+        timestamp: new Date(),
+    };
+    return config;
 }
