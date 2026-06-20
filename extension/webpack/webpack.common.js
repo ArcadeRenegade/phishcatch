@@ -27,6 +27,11 @@ module.exports = {
         path: path.join(__dirname, '../dist/js'),
         filename: '[name].js',
         hashFunction: 'xxhash64',
+        // Explicit publicPath disables webpack's "automatic publicPath" runtime,
+        // which throws "Automatic publicPath is not supported" in the content-script
+        // world (no detectable script URL). The emitted wasm asset URL is unused at
+        // runtime because ORT loads the binary via ort.env.wasm.wasmPaths instead.
+        publicPath: '',
     },
     optimization: {
         splitChunks: {
@@ -46,10 +51,26 @@ module.exports = {
                 use: 'ts-loader',
                 exclude: /node_modules/,
             },
+            {
+                // The ORT bundle references its wasm via `new URL(..., import.meta.url)`.
+                // Emit that single asset straight into dist/ml with the fixed name ORT's
+                // wasmPaths expects, instead of a hashed copy under dist/js.
+                test: /ort-wasm-simd-threaded\.wasm$/,
+                type: 'asset/resource',
+                generator: {
+                    filename: '../ml/[name][ext]',
+                },
+            },
         ],
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js'],
+        alias: {
+            // Use the lean wasm-only ORT build (inlined loader glue, single
+            // ort-wasm-simd-threaded.wasm) instead of the default JSEP/WebGPU
+            // build, which would pull a 26MB wasm and a fragile dynamic .mjs import.
+            'onnxruntime-web$': path.join(__dirname, '../node_modules/onnxruntime-web/dist/ort.wasm.bundle.min.mjs'),
+        },
         fallback: {
             "buffer": require.resolve('buffer/'),
             'util': require.resolve('util/')
@@ -62,7 +83,18 @@ module.exports = {
         }),
         new CopyPlugin({
             // patterns: [{ from: './public/', to: './' }],
-            patterns: [{ from: '.', to: '../', context: 'public' }],
+            patterns: [
+                { from: '.', to: '../', context: 'public' },
+                // ML artifacts produced by the Python pipeline (pipeline/export -> dist/ml).
+                // The ORT wasm binary is emitted to dist/ml by the asset rule above.
+                { from: path.join(__dirname, '../../pipeline/export'), to: '../ml' },
+                // ORT loads its emscripten loader glue (.mjs) at runtime via a dynamic
+                // import from wasmPaths, so it must sit next to the wasm in dist/ml.
+                {
+                    from: path.join(__dirname, '../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs'),
+                    to: '../ml/ort-wasm-simd-threaded.mjs',
+                },
+            ],
             options: {},
         }),
     ],

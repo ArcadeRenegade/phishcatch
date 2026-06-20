@@ -1,8 +1,13 @@
+.DS_Store
 .cursor/.DS_Store
+pipeline/.DS_Store
 
 # Python ML pipeline
 pipeline/.venv/
-pipeline/export/
+# Ignore generated artifacts except the two the extension build bundles.
+pipeline/export/*
+!pipeline/export/model.onnx
+!pipeline/export/feature_schema.json
 __pycache__/
 *.pyc
 .venv/

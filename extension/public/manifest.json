@@ -20,7 +20,12 @@
     "default_popup": "popup.html",
     "default_title": "PhishCatch"
   },
-  "web_accessible_resources": [],
+  "web_accessible_resources": [
+    {
+      "resources": ["ml/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": ["*://*/*"],

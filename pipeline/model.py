@@ -37,7 +37,21 @@ def build_pipeline(min_df: int = 2, max_df: float = 0.9) -> Pipeline:
                 OneHotEncoder(handle_unknown="ignore", sparse_output=False),
                 categorical_cols,
             ),
-            ("text", TfidfVectorizer(min_df=min_df, max_df=max_df), text_col),
+            # combined_text is built from DOM attributes (class_name, id, data-*),
+            # which mix kebab-case (hyphens) and snake_case/BEM (underscores). The
+            # default token_pattern treats "_" as a word char, so "prompt_textarea"
+            # would stay one token and hide the keyword "prompt". Override it to
+            # split on every non-alphanumeric char (underscores included).
+            #
+            # NOTE: no "(?u)" inline flag - skl2onnx maps token_pattern onto ONNX's
+            # Tokenizer op (RE2), which rejects Perl-style inline flags. The pattern
+            # is pure ASCII and uses no \w/\b, so the flag is unnecessary and Python
+            # tokenization is identical without it.
+            (
+                "text",
+                TfidfVectorizer(min_df=min_df, max_df=max_df, token_pattern=r"[a-zA-Z0-9]{2,}"),
+                text_col,
+            ),
         ]
     )
 

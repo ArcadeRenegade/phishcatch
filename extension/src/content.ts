@@ -16,6 +16,7 @@ import { getConfig } from './config';
 import { isBannedUrl, setBannedMessage } from './content-lib/bannedMessage';
 import { initDataCollection } from './content-lib/dataCollection';
 import { debounce } from './content-lib/debounce';
+import { runInferenceScan } from './content-lib/inference';
 import { getDomainType } from './lib/getDomainType';
 import { getSanitizedUrl } from './lib/getSanitizedUrl';
 import { DomainType, PasswordContent, UsernameContent } from './types';
@@ -153,6 +154,9 @@ ready(() => {
     // Raw field data collection runs independently of DomainType; it is gated by
     // the dataCollectionEnabled storage flag inside initDataCollection().
     initDataCollection();
+
+    // Real-time AI-prompt detection via the local ONNX model.
+    runInferenceScan();
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     setTimeout(async () => {

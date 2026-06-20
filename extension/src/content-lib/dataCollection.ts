@@ -22,7 +22,7 @@ import { debounce } from './debounce';
 
 const DATA_COLLECTION_FLAG_KEY = 'dataCollectionEnabled';
 
-const COLLECTION_SELECTOR = [
+export const COLLECTION_SELECTOR = [
     'input',
     'textarea',
     '*[role="textbox"]',

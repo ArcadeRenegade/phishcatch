@@ -1,0 +1,44 @@
+{
+  "target_key": "is_ai_prompt",
+  "boolean_keys": [
+    "read_only",
+    "disabled",
+    "required",
+    "is_content_editable"
+  ],
+  "categorical_keys": [
+    "tag_name",
+    "type",
+    "role",
+    "aria_expanded",
+    "aria_haspopup",
+    "autocomplete"
+  ],
+  "text_keys": [
+    "id",
+    "name",
+    "class_name",
+    "placeholder",
+    "data_placeholder",
+    "data_test_id",
+    "data_testid",
+    "aria_label",
+    "aria_placeholder",
+    "aria_roledescription",
+    "title",
+    "aria_labelledby",
+    "aria_describedby",
+    "aria_controls",
+    "aria_errormessage",
+    "aria_labelledby_text",
+    "aria_describedby_text",
+    "aria_controls_text",
+    "aria_errormessage_text",
+    "official_label_text",
+    "fuzzy_parent_text",
+    "button_text",
+    "form_control_name",
+    "dataset_attributes"
+  ],
+  "combined_text_column": "combined_text"
+}
