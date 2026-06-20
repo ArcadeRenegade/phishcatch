@@ -1,1 +1,8 @@
 .cursor/.DS_Store
+
+# Python ML pipeline
+pipeline/.venv/
+pipeline/export/
+__pycache__/
+*.pyc
+.venv/

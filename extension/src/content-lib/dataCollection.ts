@@ -246,17 +246,22 @@ function scanAndSend(): void {
     }
 
     const elements = Array.from(document.querySelectorAll<HTMLElement>(COLLECTION_SELECTOR));
-    const fields: RawFieldData[] = [];
+    const collected: RawFieldData[] = [];
 
     for (const el of elements) {
         if (seenElements.has(el)) {
             continue;
         }
         seenElements.add(el);
-        fields.push(collectFieldData(el));
+        console.log('[phishcatch] data collection found element', el);
+        collected.push(collectFieldData(el));
     }
 
-    sendFields(fields);
+    if (!collected.length) {
+        return;
+    }
+
+    sendFields(collected);
 }
 
 const debouncedScan = debounce(scanAndSend, 500) as () => void;
