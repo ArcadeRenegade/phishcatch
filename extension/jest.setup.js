@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// The jsdom test environment does not expose TextEncoder/TextDecoder (available
+// in real service workers/browsers), which dataCollectionLog uses for UTF-8-safe
+// base64. Polyfill them from Node's util before any test runs.
+if (typeof global.TextEncoder === 'undefined') {
+    const { TextEncoder, TextDecoder } = require('util');
+    global.TextEncoder = TextEncoder;
+    global.TextDecoder = TextDecoder;
+}
+
 // jest-webextension-mock only models MV2 surfaces. These shims add the MV3 APIs
 // the migrated extension relies on: chrome.storage.session, chrome.action, and
 // chrome.alarms. They run after jest-webextension-mock (see jest.config.js

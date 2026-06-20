@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import { getConfig } from './config';
+import { appendFields, registerDataCollectionGlobals } from './lib/dataCollectionLog';
 import { checkDOMHash, saveDOMHash } from './lib/domhash';
 import { getDomainType } from './lib/getDomainType';
 import { getHostFromUrl } from './lib/getHostFromUrl';
@@ -21,7 +22,7 @@ import { createServerAlert } from './lib/sendAlert';
 import { showCheckmarkIfEnterpriseDomain } from './lib/showCheckmarkIfEnterpriseDomain';
 import { CLEANUP_ALARM_NAME, runScheduledCleanup, timedCleanup } from './lib/timedCleanup';
 import { getHashDataIfItExists, hashAndSavePassword as hashAndSavePassword, removeHash, saveUsername } from './lib/userInfo';
-import { AlertTypes, DomainType, DomstringContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
+import { AlertTypes, CollectFieldDataContent, DomainType, DomstringContent, PageMessage, PasswordContent, PasswordHandlingReturnValue, PasswordHash, UsernameContent } from './types';
 
 export async function receiveMessage(message: PageMessage): Promise<void> {
     switch (message.msgtype) {
@@ -47,6 +48,11 @@ export async function receiveMessage(message: PageMessage): Promise<void> {
         case 'domstring': {
             const content = <DomstringContent>message.content;
             void checkDOMHash(content.dom, content.url);
+            break;
+        }
+        case 'collectFieldData': {
+            const content = <CollectFieldDataContent>message.content;
+            void appendFields(content.fields);
             break;
         }
     }
@@ -123,6 +129,8 @@ function setup() {
             void runScheduledCleanup();
         }
     });
+
+    registerDataCollectionGlobals();
 
     void showCheckmarkIfEnterpriseDomain();
     timedCleanup();

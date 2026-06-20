@@ -14,6 +14,7 @@
 
 import { getConfig } from './config';
 import { isBannedUrl, setBannedMessage } from './content-lib/bannedMessage';
+import { initDataCollection } from './content-lib/dataCollection';
 import { debounce } from './content-lib/debounce';
 import { getDomainType } from './lib/getDomainType';
 import { getSanitizedUrl } from './lib/getSanitizedUrl';
@@ -149,6 +150,10 @@ async function checkIfUrlBanned() {
 }
 
 ready(() => {
+    // Raw field data collection runs independently of DomainType; it is gated by
+    // the dataCollectionEnabled storage flag inside initDataCollection().
+    initDataCollection();
+
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     setTimeout(async () => {
         if ((await getDomainType(window.location.hostname)) === DomainType.ENTERPRISE) {

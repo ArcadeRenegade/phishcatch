@@ -13,135 +13,190 @@
 // limitations under the License.
 
 export interface Prefs {
-  data_expiry: number
-  display_reuse_alerts: boolean
-  enable_debug_gui: boolean
-  enterprise_domains: string[]
-  expire_hash_on_use: boolean
-  faq_link: string | null
-  hash_truncation_amount: number
-  ignored_domains: string[]
-  manual_password_entry: boolean
-  pbkdf2_iterations: number
-  phishcatch_server: string
-  psk: string
-  repo_link: string | null
-  url_sanitization_level: UrlSanitizationEnum
-  username_selectors: string[]
-  username_regexes: string[]
-  banned_urls: string[]
+    data_expiry: number;
+    display_reuse_alerts: boolean;
+    enable_debug_gui: boolean;
+    enterprise_domains: string[];
+    expire_hash_on_use: boolean;
+    faq_link: string | null;
+    hash_truncation_amount: number;
+    ignored_domains: string[];
+    manual_password_entry: boolean;
+    pbkdf2_iterations: number;
+    phishcatch_server: string;
+    psk: string;
+    repo_link: string | null;
+    url_sanitization_level: UrlSanitizationEnum;
+    username_selectors: string[];
+    username_regexes: string[];
+    banned_urls: string[];
 }
 
 export enum UrlSanitizationEnum {
-  host = 'host',
-  path = 'path',
-  none = 'none',
+    host = 'host',
+    path = 'path',
+    none = 'none',
 }
 
 export interface PageMessage {
-  msgtype: 'username' | 'password' | 'debug' | 'domstring'
-  content: PasswordContent | UsernameContent | DomstringContent | string
+    msgtype: 'username' | 'password' | 'debug' | 'domstring' | 'collectFieldData';
+    content: PasswordContent | UsernameContent | DomstringContent | CollectFieldDataContent | string;
+}
+
+export interface CollectFieldDataContent {
+    fields: RawFieldData[];
+}
+
+// Flat, human-readable record describing a single interactive text element.
+// Intentionally data-minimized: it never includes the element `value` or the
+// element's own typed `textContent` (which would be a user payload). All values
+// are primitives so the record stays a flat key/value object for LLM labeling.
+export interface RawFieldData {
+    // label - left null at collection time, filled in during offline labeling
+    is_ai_prompt: boolean | null;
+    // metadata
+    collected_url: string;
+    collected_at: number;
+    // structural / ARIA booleans
+    tag_name: string;
+    type: string;
+    role: string;
+    read_only: boolean;
+    disabled: boolean;
+    required: boolean;
+    is_content_editable: boolean;
+    aria_expanded: string;
+    aria_haspopup: string;
+    // attribute text
+    id: string;
+    name: string;
+    class_name: string;
+    placeholder: string;
+    data_placeholder: string;
+    data_test_id: string;
+    data_testid: string;
+    autocomplete: string;
+    aria_label: string;
+    aria_placeholder: string;
+    aria_roledescription: string;
+    title: string;
+    // raw aria-relation id references
+    aria_labelledby: string;
+    aria_describedby: string;
+    aria_controls: string;
+    aria_errormessage: string;
+    // resolved aria-relation text content
+    aria_labelledby_text: string;
+    aria_describedby_text: string;
+    aria_controls_text: string;
+    aria_errormessage_text: string;
+    // adapted from reference extraction logic
+    official_label_text: string;
+    fuzzy_parent_text: string;
+    button_text: string;
+    form_control_name: string;
+    dataset_attributes: string;
 }
 
 export interface PasswordContent {
-  password: string
-  save: boolean
-  url: string
-  referrer: string
-  timestamp: number
-  username?: string
+    password: string;
+    save: boolean;
+    url: string;
+    referrer: string;
+    timestamp: number;
+    username?: string;
 }
 
 export enum AlertTypes {
-  REUSE = 'reuse',
-  DOMHASH = 'domhash',
-  USERREPORT = 'userreport',
-  FALSEPOSITIVE = 'falsepositive',
-  PERSONALPASSWORD = 'personalpassword',
+    REUSE = 'reuse',
+    DOMHASH = 'domhash',
+    USERREPORT = 'userreport',
+    FALSEPOSITIVE = 'falsepositive',
+    PERSONALPASSWORD = 'personalpassword',
 }
 
 export interface AlertContent {
-  url: string
-  referrer: string
-  timestamp: number
-  alertType: AlertTypes
-  associatedUsername?: string
-  associatedHostname?: string
+    url: string;
+    referrer: string;
+    timestamp: number;
+    alertType: AlertTypes;
+    associatedUsername?: string;
+    associatedHostname?: string;
 }
 
 export interface UsernameContent {
-  username: string
-  url: string
-  dom: string
+    username: string;
+    url: string;
+    dom: string;
 }
 
 export interface DomstringContent {
-  dom: string
-  url: string
+    dom: string;
+    url: string;
 }
 
-export type DebugContent = string
+export type DebugContent = string;
 
 export interface TLSHInstance {
-  update(str: string, length?: number): any
-  finale(str?: string, length?: number): any
-  hash(): string
-  reset(): undefined
-  totalDiff(instance: TLSHInstance, len_diff?: number): number
-  fromTlshStr(str: string): undefined
+    update(str: string, length?: number): any;
+    finale(str?: string, length?: number): any;
+    hash(): string;
+    reset(): undefined;
+    totalDiff(instance: TLSHInstance, len_diff?: number): number;
+    fromTlshStr(str: string): undefined;
 
-  checksum: Uint8Array
-  slide_window: Uint8Array
-  a_bucket: Uint32Array
-  data_len: number
-  tmp_code: Uint8Array
-  Lvalue: number
-  Q: number
-  lsh_code: string
-  lsh_code_valid: boolean
+    checksum: Uint8Array;
+    slide_window: Uint8Array;
+    a_bucket: Uint32Array;
+    data_len: number;
+    tmp_code: Uint8Array;
+    Lvalue: number;
+    Q: number;
+    lsh_code: string;
+    lsh_code_valid: boolean;
 }
 
 export interface TLSHQuartile {
-  q1: number
-  q2: number
-  q3: number
+    q1: number;
+    q2: number;
+    q3: number;
 }
 
 export interface Username {
-  username: string
-  dateAdded: number
+    username: string;
+    dateAdded: number;
 }
 
 export interface PasswordHash {
-  hash: string
-  salt: string
-  dateAdded: number
-  username?: string
-  hostname?: string
+    hash: string;
+    salt: string;
+    dateAdded: number;
+    username?: string;
+    hostname?: string;
 }
 
 export enum PasswordHandlingReturnValue {
-  EnterpriseNoSave,
-  EnterpriseSave,
-  IgnoredDomain,
-  NoReuse,
-  ReuseAlert,
+    EnterpriseNoSave,
+    EnterpriseSave,
+    IgnoredDomain,
+    NoReuse,
+    ReuseAlert,
 }
 
 export enum DomainType {
-  ENTERPRISE = 'ENTERPRISE',
-  IGNORED = 'IGNORED',
-  DANGEROUS = 'DANGEROUS',
+    ENTERPRISE = 'ENTERPRISE',
+    IGNORED = 'IGNORED',
+    DANGEROUS = 'DANGEROUS',
 }
 
 export interface DatedDomHash {
-  hash: string
-  dateAdded: number
-  source: string
+    hash: string;
+    dateAdded: number;
+    source: string;
 }
 
 export interface NotificationData {
-  id: string
-  hash: string
-  url: string
+    id: string;
+    hash: string;
+    url: string;
 }
