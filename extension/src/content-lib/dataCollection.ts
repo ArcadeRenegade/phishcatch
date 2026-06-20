@@ -246,7 +246,7 @@ function scanAndSend(): void {
     }
 
     const elements = Array.from(document.querySelectorAll<HTMLElement>(COLLECTION_SELECTOR));
-    const collected: RawFieldData[] = [];
+    const fields: RawFieldData[] = [];
 
     for (const el of elements) {
         if (seenElements.has(el)) {
@@ -254,14 +254,14 @@ function scanAndSend(): void {
         }
         seenElements.add(el);
         console.log('[phishcatch] data collection found element', el);
-        collected.push(collectFieldData(el));
+        fields.push(collectFieldData(el));
     }
 
-    if (!collected.length) {
+    if (!fields.length) {
         return;
     }
 
-    sendFields(collected);
+    sendFields(fields);
 }
 
 const debouncedScan = debounce(scanAndSend, 500) as () => void;
